@@ -2,7 +2,7 @@
  * @Author: LuoChen 1425523063@qq.com
  * @Date: 2022-12-08 15:32:55
  * @LastEditors: LuoChen 1425523063@qq.com
- * @LastEditTime: 2023-03-02 18:27:38
+ * @LastEditTime: 2023-03-06 09:31:19
  * @FilePath: /catkin_ws/src/cartographer/cartographer/mapping/internal/2d/scan_matching/real_time_correlative_scan_matcher_2d.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -43,7 +43,7 @@
 //
 // This can be made even faster by transforming the scan exactly once over some
 // discretized range.
-
+#include <cartographer/transform/rigid_transform.h>
 #include <iostream>
 #include <memory>
 #include <vector>

@@ -123,9 +123,10 @@ std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::My_ScanMatch(
         break;
       }
     }
-    score = real_time_correlative_scan_matcher_.Match(
-            initial_icp_pose, filtered_gravity_aligned_point_cloud,
-            *matching_submap->grid(), &initial_ceres_pose);
+    initial_ceres_pose = initial_icp_pose;
+    // score = real_time_correlative_scan_matcher_.Match(
+    //         initial_icp_pose, filtered_gravity_aligned_point_cloud,
+    //         *matching_submap->grid(), &initial_ceres_pose);
     auto pose_observation = absl::make_unique<transform::Rigid2d>();
     ceres::Solver::Summary summary;
     ceres_scan_matcher_.Match(pose_prediction.translation(), initial_ceres_pose,

@@ -161,8 +161,22 @@ double RealTimeCorrelativeScanMatcher2D::Match_Nicp(
     const sensor::RangeData& gravity_aligned_range_data){
     CHECK(pose_estimate != nullptr);
     sensor::PointCloud current_cloud;
+    // for(cartographer::sensor::PointCloud::PointType point : point_cloud.points()){
+    //   point.position.head<2>() = initial_pose_estimate.cast<float>() * point.position.head<2>();
+    //   point.position[2] = 0;
+    //   current_cloud.push_back(point);
+    // }
+    auto cur2local = transform::Embed3D(initial_pose_estimate.inverse());
+    Matrix4d transform = Matrix4d::Zero();
+    transform.block<3, 3>(0, 0) = cur2local.rotation().matrix();
+    transform.block<3, 1>(0, 3) = cur2local.translation();
+    transform(3, 3) = 1;
+    auto reference = matching_submap->GetPointData();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr lastPclCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::transformPointCloud(*reference, *lastPclCloud, transform);
     for(cartographer::sensor::PointCloud::PointType point : point_cloud.points()){
-      point.position.head<2>() = initial_pose_estimate.cast<float>() * point.position.head<2>();
+      // point.position.head<2>() = initial_pose_estimate.cast<float>() * point.position.head<2>();
+      // point.position.head<2>() = point.position.head<2>();
       point.position[2] = 0;
       current_cloud.push_back(point);
     }
@@ -198,15 +212,10 @@ double RealTimeCorrelativeScanMatcher2D::Match_Nicp(
     aligner.setCorrespondenceFinder(&correspondenceFinder);
     aligner.setLinearizer(&linearizer);
     Eigen::Isometry2f initialGuess = Eigen::Isometry2f::Identity();
-    auto lastPclCloud = matching_submap->GetPointData();
-    // currentCloud->clear();
-    // referenceCloud->clear();
+
     nicp::Cloud referenceCloud, currentCloud;
     converter.compute(referenceCloud, lastPclCloud);
-    // if(referenceCloud->size() == 0){
-    //   auto lastPclCloud = matching_submap->GetPointData();
-    //   converter.compute(*referenceCloud, lastPclCloud);
-    // }
+
     converter.compute(currentCloud, currentPclCloud);
     aligner.setReferenceCloud(&referenceCloud);
     aligner.setCurrentCloud(&currentCloud);
@@ -215,7 +224,7 @@ double RealTimeCorrelativeScanMatcher2D::Match_Nicp(
     Eigen::Isometry2f T = aligner.T();
 
     transform::Rigid2d delta(T.matrix().block<2, 1>(0, 2).cast<double>(), Eigen::Rotation2Dd(T.matrix().block<2, 2>(0, 0).cast<double>()));
-    *pose_estimate = delta * initial_pose_estimate;
+    *pose_estimate = initial_pose_estimate * delta;
     return 0;
   }
 
@@ -231,8 +240,16 @@ double RealTimeCorrelativeScanMatcher2D::Match(
     pcl::PointCloud<pcl::PointXYZ>::Ptr
     target = matching_submap->GetPointData();
     sensor::PointCloud source_cloud;
+    auto cur2local = transform::Embed3D(initial_pose_estimate.inverse());
+    Matrix4d transform = Matrix4d::Zero();
+    transform.block<3, 3>(0, 0) = cur2local.rotation().matrix();
+    transform.block<3, 1>(0, 3) = cur2local.translation();
+    transform(3, 3) = 1;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr reference(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::transformPointCloud(*target, *reference, transform);
     for(cartographer::sensor::PointCloud::PointType point : point_cloud.points()){
-      point.position.head<2>() = initial_pose_estimate.cast<float>() * point.position.head<2>();
+      // point.position.head<2>() = initial_pose_estimate.cast<float>() * point.position.head<2>();
+      point.position.head<2>() = point.position.head<2>();
       point.position[2] = 0;
       source_cloud.push_back(point);
     }
@@ -254,7 +271,7 @@ double RealTimeCorrelativeScanMatcher2D::Match(
     icp.setEuclideanFitnessEpsilon(1e-5);
     icp.setRANSACIterations(4);
     icp.setInputSource(source);
-    icp.setInputTarget(target);
+    icp.setInputTarget(reference);
     
     icp.align(Final);
 
